@@ -1,0 +1,9 @@
+pageid -> \x70\x61\x67\x65\x69\x64
+lat -> \x6c\x61\x74
+ns -> \x6e\x73
+lon -> \x6c\x6f\x6e
+title -> \x74\x69\x74\x6c\x65
+dist -> \x64\x69\x73\x74
+primary -> \x70\x72\x69\x6d\x61\x72\x79
+Пиво круті -> \uffd0\uff9f\uffd0\uffb8\uffd0\uffb2\uffd0\uffbe\x20\uffd0\uffba\uffd1\uff80\uffd1\uff83\uffd1\uff82\uffd1\uff96
+ -> 
