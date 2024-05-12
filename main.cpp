@@ -17,7 +17,13 @@ void WriteJSONToFile(const std::string& sFilename, const std::string& sModJSONNa
 /// <returns>string which contains transformed value</returns>
 std::string ToHex(char cSymb) {
     const char cHexArr[] = "0123456789abcdef";
-    return { cHexArr[(cSymb >> 12) & 0xF], cHexArr[(cSymb >> 8) & 0xF], cHexArr[(cSymb >> 4) & 0xF], cHexArr[cSymb & 0xF] };
+    std::string result;
+    result += cHexArr[(cSymb >> 12) & 0xF];
+    result += cHexArr[(cSymb >> 8) & 0xF];
+    result += cHexArr[(cSymb >> 4) & 0xF];
+    result += cHexArr[cSymb & 0xF];
+    return result;
+
 }
 
 /// <summary>
@@ -45,7 +51,7 @@ std::unordered_map<std::string, std::string> CollectStrings(const std::string& s
             bInQuotes = !bInQuotes;
             if (!bInQuotes) {
                 if (bIsKey) {
-                    umStrings.emplace(std::move(sCurrent), "");
+                    umStrings.insert(std::make_pair(std::move(sCurrent), ""));
                 }
                 else {
                     umStrings[sCurrent] = StringToUnicode(sCurrent);
