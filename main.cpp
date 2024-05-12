@@ -2,9 +2,13 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
+std::string ToHex(char cSymb);
+std::string JSON_Read(const std::string& fJSON);
+std::unordered_map<std::string, std::string> CollectStrings(const std::string& sContent);
 std::string StringToUnicode(const std::string& str);
+void WriteReplacementMap(const std::unordered_map<std::string, std::string>& u_mReplacementMap, const std::string& sFilename);
+void WriteJSONToFile(const std::string& sFilename, const std::string& sModJSONName);
 
 /// <summary>
 /// Function which converts symbols into their respective hexadecimal values
@@ -12,8 +16,8 @@ std::string StringToUnicode(const std::string& str);
 /// <param name="cSymb">symbol we want to change</param>
 /// <returns>string which contains transformed value</returns>
 std::string ToHex(char cSymb) {
-    const char hexChars[] = "0123456789abcdef";
-    return { hexChars[(cSymb >> 12) & 0xF], hexChars[(cSymb >> 8) & 0xF], hexChars[(cSymb >> 4) & 0xF], hexChars[cSymb & 0xF] };
+    const char cHexArr[] = "0123456789abcdef";
+    return { cHexArr[(cSymb >> 12) & 0xF], cHexArr[(cSymb >> 8) & 0xF], cHexArr[(cSymb >> 4) & 0xF], cHexArr[cSymb & 0xF] };
 }
 
 /// <summary>
@@ -29,63 +33,63 @@ std::string JSON_Read(const std::string& fJSON) {
 /// <summary>
 /// Function to collect all strings enclosed in quotation marks from a JSON string
 /// </summary>
-/// <param name="str">The JSON string from which to collect strings</param>
+/// <param name="sContent">The JSON content string from which to collect strings</param>
 /// <returns>An unordered_map containing the collected strings as keys</returns>
-std::unordered_map<std::string, std::string> CollectStrings(const std::string& str) {
-    std::unordered_map<std::string, std::string> strings;
-    std::string currentString;
-    bool inQuotes = false;
-    bool isKey = false;
-    for (char c : str) {
-        if (c == '"') {
-            inQuotes = !inQuotes;
-            if (!inQuotes) {
-                if (isKey) {
-                    strings.emplace(std::move(currentString), "");
+std::unordered_map<std::string, std::string> CollectStrings(const std::string& sContent) {
+    std::unordered_map<std::string, std::string> umStrings;
+    std::string sCurrent;
+    bool bInQuotes = false;
+    bool bIsKey = false;
+    for (char cTemp : sContent) {
+        if (cTemp == '"') {
+            bInQuotes = !bInQuotes;
+            if (!bInQuotes) {
+                if (bIsKey) {
+                    umStrings.emplace(std::move(sCurrent), "");
                 }
                 else {
-                    strings[currentString] = StringToUnicode(currentString);
+                    umStrings[sCurrent] = StringToUnicode(sCurrent);
                 }
-                currentString.clear();
-                isKey = !isKey;
+                sCurrent.clear();
+                bIsKey = !bIsKey;
             }
         }
-        else if (inQuotes) {
-            currentString.push_back(c);
+        else if (bInQuotes) {
+            sCurrent.push_back(cTemp);
         }
     }
-    return strings;
+    return umStrings;
 }
 
 /// <summary>
 /// Function to convert a string to its Unicode escape sequence
 /// </summary>
-/// <param name="str">The string to convert</param>
+/// <param name="sToConvert">The string to convert into Unicode</param>
 /// <returns>The Unicode escape sequence string</returns>
-std::string StringToUnicode(const std::string& str) {
-    std::string unicodeStr;
-    for (char c : str) {
-        unicodeStr += "\\u" + ToHex(c);
+std::string StringToUnicode(const std::string& sToConvert) {
+    std::string sConverted;
+    for (char cTemp : sToConvert) {
+        sConverted += "\\u" + ToHex(cTemp);
     }
-    return unicodeStr;
+    return sConverted;
 }
 
 /// <summary>
 /// Function to write the replacement map to a file with modified Unicode escape sequence format
 /// </summary>
-/// <param name="replacementMap">The replacement map to write</param>
-/// <param name="filename">The name of the file to write to</param>
-void WriteReplacementMap(const std::unordered_map<std::string, std::string>& replacementMap, const std::string& filename) {
-    std::ofstream file(filename);
-    if (file.is_open()) {
-        for (const auto& pair : replacementMap) {
-            std::string modifiedValue = pair.second;
-            size_t pos = 0;
-            while ((pos = modifiedValue.find("\\u00", pos)) != std::string::npos) {
-                modifiedValue.replace(pos, 6, "\\x" + modifiedValue.substr(pos + 4, 2));
-                pos += 4;
+/// <param name="u_mReplacementMap">The replacement map to write</param>
+/// <param name="sFilename">The name of the file to write to</param>
+void WriteReplacementMap(const std::unordered_map<std::string, std::string>& u_mReplacementMap, const std::string& sFilename) {
+    std::ofstream ofstrFile(sFilename);
+    if (ofstrFile.is_open()) {
+        for (const auto& sPair : u_mReplacementMap) {
+            std::string sModified = sPair.second;
+            size_t s_tPos = 0;
+            while ((s_tPos = sModified.find("\\u00", s_tPos)) != std::string::npos) {
+                sModified.replace(s_tPos, 6, "\\x" + sModified.substr(s_tPos + 4, 2));
+                s_tPos += 4;
             }
-            file << pair.first << " -> " << modifiedValue << std::endl;
+            ofstrFile << sPair.first << " -> " << sModified << std::endl;
         }
     }
 }
@@ -93,13 +97,13 @@ void WriteReplacementMap(const std::unordered_map<std::string, std::string>& rep
 /// <summary>
 /// Function to write the modified JSON with Unicode escape sequences back into the file
 /// </summary>
-/// <param name="filename">The name of the file to write to</param>
-/// <param name="modifiedJson">The modified JSON string to write</param>
-void WriteJSONToFile(const std::string& filename, const std::string& modifiedJson) {
-    std::ofstream file(filename);
-    if (file.is_open()) {
-        file << modifiedJson;
-        std::cout << "Modified JSON written back to file: " << filename << std::endl;
+/// <param name="sFilename">The name of the file to write to</param>
+/// <param name="sModJSONName">The modified JSON string to write</param>
+void WriteJSONToFile(const std::string& sFilename, const std::string& sModJSONName) {
+    std::ofstream ofstrFile(sFilename);
+    if (ofstrFile.is_open()) {
+        ofstrFile << sModJSONName;
+        std::cout << "Modified JSON written back to file: " << sFilename << std::endl;
     }
     else {
         std::cerr << "Error: Unable to write modified JSON to file." << std::endl;
@@ -107,26 +111,26 @@ void WriteJSONToFile(const std::string& filename, const std::string& modifiedJso
 }
 
 int main() {
-    std::string filename;
+    std::string sFilename;
     std::cout << "Enter the name of the JSON file: ";
-    std::cin >> filename;
+    std::cin >> sFilename;
 
-    std::string originalJson = JSON_Read(filename);
-    if (originalJson.empty()) {
+    std::string sJSONName = JSON_Read(sFilename);
+    if (sJSONName.empty()) {
         std::cerr << "Error: Unable to read JSON from file." << std::endl;
         return 1;
     }
 
-    std::cout << "Read JSON from file:\n" << originalJson << std::endl;
+    std::cout << "Read JSON from file:\n" << sJSONName << std::endl;
 
-    auto strings = CollectStrings(originalJson);
-    std::unordered_map<std::string, std::string> replacementMap;
-    for (const auto& str : strings) {
-        replacementMap[str.first] = StringToUnicode(str.first);
+    auto u_mStrings = CollectStrings(sJSONName);
+    std::unordered_map<std::string, std::string> u_mReplacement;
+    for (const auto& sTemp : u_mStrings) {
+        u_mReplacement[sTemp.first] = StringToUnicode(sTemp.first);
     }
 
-    std::string modifiedJson = originalJson;
-    for (const auto& pair : replacementMap) {
+    std::string sModJSONName = sJSONName;
+    /*for (const auto& pair : replacementMap) {
         size_t pos = modifiedJson.find(pair.first);
         while (pos != std::string::npos) {
             modifiedJson.replace(pos, pair.first.length(), pair.second);
@@ -138,16 +142,34 @@ int main() {
                 break;
             }
         }
+    }*/
+    for (const auto& sPair : u_mReplacement) {
+        std::string::size_type s_zPos = sModJSONName.find(sPair.first);
+        while (s_zPos != std::string::npos) {
+            if (s_zPos == 0 || sModJSONName[s_zPos - 1] == '"') {
+                std::string::size_type endPos = s_zPos + sPair.first.length();
+                if (endPos == sModJSONName.length() || sModJSONName[endPos] == '"') {
+                    sModJSONName.replace(s_zPos, sPair.first.length(), sPair.second);
+                }
+            }
+            s_zPos = sModJSONName.find(sPair.first, s_zPos + sPair.second.length());
+            if (s_zPos == std::string::npos) {
+                break;
+            }
+            if (sPair.first == sPair.second) {
+                break;
+            }
+        }
     }
+  
 
-    // Write the replacement map to a file
-    std::string mapFilename = "replacement_map.txt";
-    WriteReplacementMap(replacementMap, mapFilename);
-    std::cout << "Replacement map written to " << mapFilename << std::endl;
+    std::string sMapFilename = "replacement_map.txt";
+    WriteReplacementMap(u_mReplacement, sMapFilename);
+    std::cout << "Replacement map written to " << sMapFilename << std::endl;
 
-    std::cout << "Unicode representation:\n" << modifiedJson << std::endl;
+    std::cout << "Unicode representation:\n" << sModJSONName << std::endl;
 
-    WriteJSONToFile(filename, modifiedJson);
+    WriteJSONToFile(sFilename, sModJSONName);
 
     return 0;
 }
